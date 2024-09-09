@@ -1,0 +1,21 @@
+
+
+docker image pull node:latest   		is used for pulling the latest node version from dockerhub
+
+docker images or docker image ls 		is used for viewing node images.
+
+docker build -t backend .				is used for creating an image
+
+docker run -dp 3001:3001 backend		is used for exposing the port and print the container id.
+
+docker container ps						is used for listing the running containers.
+
+docker rmi image_name/id				is used for removing images
+
+docker container stop container_id		is used for stopping active container.
+
+docker ps -a 							is used for viewing stopped containers.
+
+docker rm container_id					is used for removing containers.
+
+the docker files should be in the name dockerfile where d must be in capital letter.
