@@ -1,0 +1,14 @@
+name: simple ci workflow
+on:
+  push:
+    branches:
+      - main
+      - b1
+      - b2
+jobs:
+  mytestbuild:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Print a test message
+      run: echo "hello world"
