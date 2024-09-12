@@ -1,0 +1,44 @@
+name: s3
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: AWS
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+
+    - name: Check if first deployment
+      id: first_deploy
+      run: |
+        aws s3 ls s3://mangeshport/ || echo "First deployment"
+
+    - name: Initial S3 Sync (all files)
+      if: steps.first_deploy.outputs == ''
+      run: |
+        aws s3 cp . s3://mangeshport/ --recursive
+      continue-on-error: true
+
+    - name: Get list of changed files
+      if: steps.first_deploy.outputs != ''
+      id: changed_files
+      run: |
+        git diff --name-only HEAD^ HEAD > changed_files.txt
+        cat changed_files.txt
+
+    - name: Sync updated files to S3
+      if: steps.first_deploy.outputs != ''
+      run: |
+        while read file; do
+          aws s3 cp "$file" "s3://mangeshport/$file"
+        done < changed_files.txt
