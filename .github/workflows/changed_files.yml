@@ -33,7 +33,17 @@ jobs:
       if: steps.first_deploy.outputs != ''
       id: changed_files
       run: |
-        git diff --name-only HEAD^ HEAD > changed_files.txt
+        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
+          echo "Shallow clone, fetching full history..."
+          git fetch --unshallow
+        fi
+    
+        if git rev-parse --verify HEAD^ > /dev/null 2>&1; then
+          git diff --name-only HEAD^ HEAD > changed_files.txt
+        else
+          # This is the first commit, so no changes to compare
+          git ls-files > changed_files.txt
+        fi
         cat changed_files.txt
 
     - name: Sync updated files to S3
