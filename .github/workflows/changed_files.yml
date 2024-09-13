@@ -10,6 +10,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
 
     - name: AWS
       uses: aws-actions/configure-aws-credentials@v1
@@ -21,34 +23,32 @@ jobs:
     - name: Check if first deployment
       id: first_deploy
       run: |
-        aws s3 ls s3://mangeshport/ || echo "First deployment"
+        if aws s3 ls s3://mangeshport/; then
+          echo "Existing deployment"
+          echo "first_deploy=false" >> $GITHUB_ENV
+        else
+          echo "First deployment"
+          echo "first_deploy=true" >> $GITHUB_ENV
+        fi
 
     - name: Initial S3 Sync (all files)
-      if: steps.first_deploy.outputs == ''
+      if: env.first_deploy == 'true'
       run: |
-        aws s3 cp . s3://mangeshport/ --recursive
+        aws s3 sync . s3://mangeshport/
       continue-on-error: true
 
     - name: Get list of changed files
-      if: steps.first_deploy.outputs != ''
+      if: env.first_deploy == 'false'
       id: changed_files
       run: |
-        if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
-          echo "Shallow clone, fetching full history..."
-          git fetch --unshallow
-        fi
-    
-        if git rev-parse --verify HEAD^ > /dev/null 2>&1; then
-          git diff --name-only HEAD^ HEAD > changed_files.txt
-        else
-          # This is the first commit, so no changes to compare
-          git ls-files > changed_files.txt
-        fi
+        git diff --name-only HEAD^ HEAD > changed_files.txt
         cat changed_files.txt
 
     - name: Sync updated files to S3
-      if: steps.first_deploy.outputs != ''
+      if: env.first_deploy == 'false'
       run: |
         while read file; do
-          aws s3 cp "$file" "s3://mangeshport/$file"
+          if [ -f "$file" ]; then
+            aws s3 cp "$file" "s3://mangeshport/$file"
+          fi
         done < changed_files.txt
