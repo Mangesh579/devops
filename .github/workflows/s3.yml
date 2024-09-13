@@ -2,7 +2,7 @@ name: s3
 on:
   push:
     branches:
-    -  b1
+    -  main
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
