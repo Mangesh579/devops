@@ -3,56 +3,19 @@ on:
   push:
     branches:
       - main
-
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
-      uses: actions/checkout@v2
-      with:
-        fetch-depth: 0  # Fetch full Git history to detect changes properly
+      uses: actions/checkout@v1
 
-    - name: AWS Credentials
+    - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v1
-      with:
+      with: 
         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: us-east-1
 
-    - name: Check if S3 bucket has content (First deployment check)
-      id: first_deploy
-      run: |
-        if aws s3 ls s3://mangeshport/ | grep -q 'PRE'; then
-          echo "first_deploy=false" >> $GITHUB_ENV
-        else
-          echo "first_deploy=true" >> $GITHUB_ENV
-        fi
-
-    - name: Initial S3 Sync (All files on first deployment)
-      if: env.first_deploy == 'true'
-      run: |
-        echo "First deployment: Syncing all files to S3"
-        aws s3 sync . s3://mangeshport/ --delete
-
-    - name: Get list of changed files (for subsequent deployments)
-      if: env.first_deploy == 'false'
-      id: changed_files
-      run: |
-        echo "Fetching list of changed files"
-        git diff --name-only HEAD^ HEAD > changed_files.txt
-        echo "Changed files:"
-        cat changed_files.txt
-
-    - name: Sync updated files to S3 (on subsequent deployments)
-      if: env.first_deploy == 'false'
-      run: |
-        echo "Syncing changed files to S3"
-        while read file; do
-          if [ -f "$file" ]; then
-            echo "Uploading $file to S3"
-            aws s3 cp "$file" "s3://mangeshport/$file"
-          else
-            echo "$file does not exist or has been deleted."
-          fi
-        done < changed_files.txt
+    - name: Sync to S3
+      run: aws s3 sync . s3://mangeshport/ --exact-timestamps
