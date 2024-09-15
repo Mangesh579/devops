@@ -23,5 +23,5 @@ jobs:
     - name: Notify SNS
       run: |
         aws sns publish \
-          --arn:aws:sns:us-east-1:010059963570:notification  \
+          --topic-arn arn:aws:sns:us-east-1:010059963570:notification  \
           --message "Deployment to S3 completed. Files have been uploaded to s3://mangeshport/."
