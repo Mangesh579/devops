@@ -17,11 +17,22 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ secrets.AWS_REGION }}
 
-    - name: Sync to S3
-      run: aws s3 sync . s3://mangeshport/ --size-only
-      
-    - name: Notify SNS
+    - name: Sync to S3 and capture new files
       run: |
-        aws sns publish \
-          --topic-arn arn:aws:sns:us-east-1:010059963570:notification  \
-          --message "Deployment to S3 completed. Files have been uploaded to s3://mangeshport/."
+        # Sync files and log output to track new/updated files
+        aws s3 sync . s3://mangeshport/ --size-only | tee sync.log
+        # Extract new/updated file names from the log
+        grep "upload:" sync.log | awk '{print $NF}' > new_files.log
+
+    - name: Notify SNS with new files
+      run: |
+        # Read the new files from the log
+        file_names=$(cat new_files.log | tr '\n' ' ')
+        # If there are new files, send an SNS notification
+        if [ -s new_files.log ]; then
+          aws sns publish \
+            --topic-arn arn:aws:sns:us-east-1:682067881388:notification  \
+            --message "Deployment to S3 completed. The following files were added/updated: $file_names"
+        else
+          echo "No new files were added."
+        fi
